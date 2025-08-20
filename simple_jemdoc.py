@@ -3,7 +3,77 @@ import re
 import os
 import sys
 
-def convert_jemdoc_to_html(jemdoc_content, title=""):
+def parse_menu_file():
+    """Parse MENU file and return menu structure"""
+    menu_items = []
+    if os.path.exists('MENU'):
+        with open('MENU', 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        
+        current_category = None
+        for line in lines:
+            line = line.rstrip()
+            if not line:
+                continue
+            
+            # Check if line contains a URL (menu item)
+            if '[' in line and ']' in line:
+                # Extract text and URL
+                url_match = re.search(r'\[([^\]]+)\]', line)
+                if url_match:
+                    url = url_match.group(1)
+                    text = re.sub(r'\s*\[[^\]]+\]', '', line).strip()
+                    if current_category:
+                        menu_items.append({
+                            'type': 'item',
+                            'category': current_category,
+                            'url': url,
+                            'text': text
+                        })
+            else:  # Category line
+                current_category = line.strip()
+                menu_items.append({
+                    'type': 'category',
+                    'name': current_category
+                })
+    
+    return menu_items
+
+def generate_menu_html(current_file, is_chinese=False):
+    """Generate menu HTML based on MENU file"""
+    menu_items = parse_menu_file()
+    menu_html = []
+    
+    for item in menu_items:
+        if item['type'] == 'category':
+            # Show appropriate menu category based on language
+            if item['name'] == 'Language':
+                menu_html.append('<div class="menu-category">语言</div>' if is_chinese else '<div class="menu-category">Language</div>')
+            elif is_chinese and item['name'] == '菜单':
+                menu_html.append('<div class="menu-category">菜单</div>')
+            elif not is_chinese and item['name'] == 'Menu':
+                menu_html.append('<div class="menu-category">Menu</div>')
+        else:
+            # Show menu items based on language and category
+            if item['category'] == 'Language':
+                # For Language section, show the opposite language
+                if is_chinese and item['text'] == 'English':
+                    menu_html.append(f'<div class="menu-item"><a href="{item["url"]}">{item["text"]}</a></div>')
+                elif not is_chinese and item['text'] == '中文':
+                    menu_html.append(f'<div class="menu-item"><a href="{item["url"]}">{item["text"]}</a></div>')
+            elif is_chinese and item['category'] == '菜单':
+                # Show Chinese menu items for Chinese pages
+                menu_html.append(f'<div class="menu-item"><a href="{item["url"]}">{item["text"]}</a></div>')
+            elif not is_chinese and item['category'] == 'Menu':
+                # Show English menu items for English pages
+                menu_html.append(f'<div class="menu-item"><a href="{item["url"]}">{item["text"]}</a></div>')
+    
+    return '\n'.join(menu_html)
+
+def convert_jemdoc_to_html(jemdoc_content, title="", current_file=""):
+    is_chinese = '_cn.' in current_file
+    menu_html = generate_menu_html(current_file, is_chinese)
+    
     html_template = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
   "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
@@ -18,12 +88,7 @@ def convert_jemdoc_to_html(jemdoc_content, title=""):
 <tr valign="top">
 <td id="layout-menu">
 <div id="layout-menu-container">
-<div class="menu-category">Menu</div>
-<div class="menu-item"><a href="index.html">Home</a></div>
-<div class="menu-item"><a href="research.html">Research</a></div>
-<div class="menu-item"><a href="publications.html">Publications</a></div>
-<div class="menu-item"><a href="teaching.html">Teaching</a></div>
-<div class="menu-item"><a href="contact.html">Contact</a></div>
+{menu}
 </div>
 </td>
 <td id="layout-content">
@@ -47,11 +112,6 @@ def convert_jemdoc_to_html(jemdoc_content, title=""):
     else:
         page_title = title
     
-    # Handle image blocks (profile photo)
-    content = re.sub(r'~~~\s*\{[^}]*\}\{img_left\}\{([^}]+)\}[^~]*~~~([^~]*)~~~', 
-                    r'<table class="imgtable"><tr><td><img src="\1" alt="photo" width="131px" height="160px" /></td><td align="left">\2</td></tr></table>', 
-                    content, flags=re.DOTALL)
-    
     # Convert sections
     content = re.sub(r'^== (.+)$', r'<h2>\1</h2>', content, flags=re.MULTILINE)
     content = re.sub(r'^=== (.+)$', r'<h3>\1</h3>', content, flags=re.MULTILINE)
@@ -70,6 +130,11 @@ def convert_jemdoc_to_html(jemdoc_content, title=""):
     
     # Handle line breaks
     content = re.sub(r' \\n', '<br/>', content)
+    
+    # Handle image blocks with ~~~ syntax (after text processing)
+    content = re.sub(r'~~~\s*\n\{\}\{img_left\}\{([^}]+)\}\{[^}]*\}\{(\d+)\}\{(\d+)\}\s*\n(.*?)\n~~~', 
+                    r'<table class="imgtable"><tr><td><img src="\1" alt="photo" width="\2px" height="\3px" /></td><td align="left">\4</td></tr></table>', 
+                    content, flags=re.DOTALL)
     
     # Process lines
     lines = content.split('\n')
@@ -110,6 +175,13 @@ def convert_jemdoc_to_html(jemdoc_content, title=""):
                 result_lines.append('<ul>')
                 in_unordered_list = True
             result_lines.append('<li>' + line[2:] + '</li>')
+        # Handle nested unordered lists (-- items)
+        elif re.match(r'^  -- ', line):
+            if in_unordered_list:
+                # Add as nested list item with proper indentation
+                result_lines.append('<ul><li>' + line[5:] + '</li></ul>')
+            else:
+                result_lines.append('<p>' + line + '</p>')
         # Handle headers (already converted above)
         elif line.startswith('<h'):
             if in_ordered_list:
@@ -149,23 +221,47 @@ def convert_jemdoc_to_html(jemdoc_content, title=""):
     
     content = '\n'.join(result_lines)
     
-    return html_template.format(title=page_title, content=content)
+    return html_template.format(title=page_title, content=content, menu=menu_html)
 
 def main():
-    jemdoc_files = ['index.jemdoc', 'research.jemdoc', 'publications.jemdoc', 'teaching.jemdoc', 'contact.jemdoc']
-    
-    for jemdoc_file in jemdoc_files:
+    # 处理命令行参数
+    if len(sys.argv) > 1:
+        jemdoc_file = sys.argv[1]
+        
+        # 检查是否指定了输出文件名
+        output_file = None
+        if len(sys.argv) > 3 and sys.argv[2] == '-o':
+            output_file = sys.argv[3]
+        
         if os.path.exists(jemdoc_file):
             with open(jemdoc_file, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            html_content = convert_jemdoc_to_html(content)
-            html_file = jemdoc_file.replace('.jemdoc', '.html')
+            html_file = output_file if output_file else jemdoc_file.replace('.jemdoc', '.html')
+            html_content = convert_jemdoc_to_html(content, current_file=html_file)
             
             with open(html_file, 'w', encoding='utf-8') as f:
                 f.write(html_content)
             
             print(f"Converted {jemdoc_file} to {html_file}")
+    else:
+        # 默认处理这些文件
+        jemdoc_files = ['index.jemdoc', 'research.jemdoc', 'publications.jemdoc', 'teaching.jemdoc', 'people.jemdoc', 
+                        'joinus.jemdoc', 'contact.jemdoc', 'index_cn.jemdoc', 'research_cn.jemdoc', 'publications_cn.jemdoc', 
+                        'teaching_cn.jemdoc', 'people_cn.jemdoc', 'joinus_cn.jemdoc', 'contact_cn.jemdoc']
+        
+        for jemdoc_file in jemdoc_files:
+            if os.path.exists(jemdoc_file):
+                with open(jemdoc_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                html_file = jemdoc_file.replace('.jemdoc', '.html')
+                html_content = convert_jemdoc_to_html(content, current_file=html_file)
+                
+                with open(html_file, 'w', encoding='utf-8') as f:
+                    f.write(html_content)
+                
+                print(f"Converted {jemdoc_file} to {html_file}")
 
 if __name__ == "__main__":
     main()

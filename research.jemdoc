@@ -1,36 +1,28 @@
 # Research
 
 == Current Research
-My current research focuses on several key areas in computer science:
 
-=== Machine Learning
-- Developing novel algorithms for supervised and unsupervised learning
-- Working on optimization techniques for deep neural networks
-- Investigating transfer learning and few-shot learning approaches
+=== Research Fields
+- Concept of Operations (ConOps) Design and Evaluation
+- Risk and Safety
+- Optimization of Traffic Operations
+- Traffic System Performance Benchmarking
 
-=== Natural Language Processing
-- Text classification and sentiment analysis
-- Language model fine-tuning and adaptation
-- Multilingual NLP applications
+=== Theoretical Methods
+- Data Science and Machine Learning (including Deep Learning and Deep Reinforcement Learning)
+- Probabilistic Modeling and Reasoning
+- Agent-Based Modeling and Simulation (ABMS)
+- Operations Research / Mathematical Optimization
+- Blockchain
 
-=== Computer Vision
-- Object detection and recognition
-- Image segmentation and analysis
-- Video understanding and processing
+=== Research Wordcloud
+~~~
+{}{img_left}{wordcloud.png}{Research Wordcloud}{500}{500}
 
-== Research Projects
+~~~
 
-=== Project 1: Advanced Machine Learning Framework
-*Duration:* 20XX - Present \n
-*Funding:* NSF Grant #XXXXXXX \n
-*Description:* Developing a comprehensive framework for machine learning applications.
+== Funded Projects
 
-=== Project 2: NLP for Social Media Analysis
-*Duration:* 20XX - 20XX \n
-*Collaborators:* Prof. John Smith, Dr. Jane Doe \n
-*Description:* Analyzing sentiment and trends in social media data using advanced NLP techniques.
-
-== Future Directions
-- Exploring quantum machine learning algorithms
-- Investigating ethical AI and fairness in machine learning
-- Developing more efficient training methods for large-scale models
+=== Project 1: Design of Urban Airspace Management Model Based on Blockchain Technology
+*Duration:* 2025 - Present \n
+*Funding:* Fundamental Research Funds for the Central Universities \n
